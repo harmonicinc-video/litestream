@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/benbjohnson/litestream"
+	"github.com/harmonicinc-video/litestream"
 )
 
 // LTXCommand represents a command to list LTX files for a database.

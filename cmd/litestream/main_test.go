@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	main "github.com/benbjohnson/litestream/cmd/litestream"
-	"github.com/benbjohnson/litestream/file"
-	"github.com/benbjohnson/litestream/gs"
-	"github.com/benbjohnson/litestream/s3"
+	main "github.com/harmonicinc-video/litestream/cmd/litestream"
+	"github.com/harmonicinc-video/litestream/file"
+	"github.com/harmonicinc-video/litestream/gs"
+	"github.com/harmonicinc-video/litestream/s3"
 )
 
 func TestOpenConfigFile(t *testing.T) {
