@@ -17,12 +17,12 @@ import (
 	"time"
 
 	"filippo.io/age"
-	"github.com/benbjohnson/litestream"
-	"github.com/benbjohnson/litestream/abs"
-	"github.com/benbjohnson/litestream/file"
-	"github.com/benbjohnson/litestream/gcs"
-	"github.com/benbjohnson/litestream/s3"
-	"github.com/benbjohnson/litestream/sftp"
+	"github.com/harmonicinc-video/litestream"
+	"github.com/harmonicinc-video/litestream/abs"
+	"github.com/harmonicinc-video/litestream/file"
+	"github.com/harmonicinc-video/litestream/gcs"
+	"github.com/harmonicinc-video/litestream/s3"
+	"github.com/harmonicinc-video/litestream/sftp"
 	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/yaml.v2"
 )

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benbjohnson/litestream"
+	"github.com/harmonicinc-video/litestream"
 )
 
 func TestDB_Path(t *testing.T) {

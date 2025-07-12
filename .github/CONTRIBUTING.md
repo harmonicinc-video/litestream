@@ -13,5 +13,5 @@ request.
 If you find mistakes in the documentation, please submit a fix to the
 [documentation repository][docs].
 
-[new-issue]: https://github.com/benbjohnson/litestream/issues/new
-[docs]: https://github.com/benbjohnson/litestream.io
+[new-issue]: https://github.com/harmonicinc-video/litestream/issues/new
+[docs]: https://github.com/harmonicinc-video/litestream.io
