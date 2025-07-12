@@ -17,8 +17,8 @@ import (
 
 	"github.com/psanford/sqlite3vfs"
 
-	"github.com/benbjohnson/litestream"
-	"github.com/benbjohnson/litestream/s3"
+	"github.com/harmonicinc-video/litestream"
+	"github.com/harmonicinc-video/litestream/s3"
 )
 
 func main() {}

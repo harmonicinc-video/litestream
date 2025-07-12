@@ -12,9 +12,9 @@ import (
 
 	"github.com/superfly/ltx"
 
-	"github.com/benbjohnson/litestream"
-	"github.com/benbjohnson/litestream/file"
-	"github.com/benbjohnson/litestream/internal/testingutil"
+	"github.com/harmonicinc-video/litestream"
+	"github.com/harmonicinc-video/litestream/file"
+	"github.com/harmonicinc-video/litestream/internal/testingutil"
 )
 
 func TestDB_Path(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/superfly/ltx"
 
-	"github.com/benbjohnson/litestream"
+	"github.com/harmonicinc-video/litestream"
 )
 
 var _ litestream.ReplicaClient = (*ReplicaClient)(nil)
