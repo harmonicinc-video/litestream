@@ -27,6 +27,9 @@ jobs:
       GOARM:  ${{ matrix.arm }}
       CC:     ${{ matrix.cc }}
 
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
@@ -61,21 +64,13 @@ jobs:
           ../nfpm pkg --config nfpm.yml --packager deb --target litestream-${{ steps.release.outputs.tag_name }}-${{ env.GOOS }}-${{ env.GOARCH }}${{ env.GOARM }}.deb
 
       - name: Upload release tarball
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./dist/litestream-${{ steps.release.outputs.tag_name }}-${{ env.GOOS }}-${{ env.GOARCH }}${{ env.GOARM }}.tar.gz
-          asset_name: litestream-${{ steps.release.outputs.tag_name }}-${{ env.GOOS }}-${{ env.GOARCH }}${{ env.GOARM }}.tar.gz
-          asset_content_type: application/gzip
+          files: |
+            ./dist/litestream-${{ steps.release.outputs.tag_name }}-${{ env.GOOS }}-${{ env.GOARCH }}${{ env.GOARM }}.tar.gz
 
       - name: Upload debian package
-        uses: actions/upload-release-asset@v1.0.2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ steps.release.outputs.upload_url }}
-          asset_path: ./dist/litestream-${{ steps.release.outputs.tag_name }}-${{ env.GOOS }}-${{ env.GOARCH }}${{ env.GOARM }}.deb
-          asset_name: litestream-${{ steps.release.outputs.tag_name }}-${{ env.GOOS }}-${{ env.GOARCH }}${{ env.GOARM }}.deb
-          asset_content_type: application/octet-stream
+          files: |
+            ./dist/litestream-${{ steps.release.outputs.tag_name }}-${{ env.GOOS }}-${{ env.GOARCH }}${{ env.GOARM }}.deb
