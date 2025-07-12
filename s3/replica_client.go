@@ -19,8 +19,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/benbjohnson/litestream"
-	"github.com/benbjohnson/litestream/internal"
+	"github.com/harmonicinc-video/litestream"
+	"github.com/harmonicinc-video/litestream/internal"
 	"golang.org/x/sync/errgroup"
 )
 

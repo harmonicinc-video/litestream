@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/benbjohnson/litestream"
+	"github.com/harmonicinc-video/litestream"
 	_ "github.com/mattn/go-sqlite3"
 )
 

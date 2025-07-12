@@ -1,9 +1,9 @@
 Litestream
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/benbjohnson/litestream)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/harmonicinc-video/litestream)
 ![Status](https://img.shields.io/badge/status-beta-blue)
-![GitHub](https://img.shields.io/github/license/benbjohnson/litestream)
+![GitHub](https://img.shields.io/github/license/harmonicinc-video/litestream)
 [![Docker Pulls](https://img.shields.io/docker/pulls/litestream/litestream.svg?maxAge=604800)](https://hub.docker.com/r/litestream/litestream/)
-![test](https://github.com/benbjohnson/litestream/workflows/test/badge.svg)
+![test](https://github.com/harmonicinc-video/litestream/workflows/test/badge.svg)
 ==========
 
 Litestream is a standalone disaster recovery tool for SQLite. It runs as a
@@ -12,7 +12,7 @@ or S3. Litestream only communicates with SQLite through the SQLite API so it
 will not corrupt your database.
 
 If you need support or have ideas for improving Litestream, please join the
-[Litestream Slack][slack] or visit the [GitHub Discussions](https://github.com/benbjohnson/litestream/discussions).
+[Litestream Slack][slack] or visit the [GitHub Discussions](https://github.com/harmonicinc-video/litestream/discussions).
 Please visit the [Litestream web site](https://litestream.io) for installation
 instructions and documentation.
 
@@ -56,5 +56,5 @@ request.
 If you find mistakes in the documentation, please submit a fix to the
 [documentation repository][docs].
 
-[new-issue]: https://github.com/benbjohnson/litestream/issues/new
-[docs]: https://github.com/benbjohnson/litestream.io
+[new-issue]: https://github.com/harmonicinc-video/litestream/issues/new
+[docs]: https://github.com/harmonicinc-video/litestream.io

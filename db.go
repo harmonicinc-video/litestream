@@ -19,7 +19,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/benbjohnson/litestream/internal"
+	"github.com/harmonicinc-video/litestream/internal"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )

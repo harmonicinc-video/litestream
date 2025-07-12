@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/benbjohnson/litestream"
-	"github.com/benbjohnson/litestream/internal"
+	"github.com/harmonicinc-video/litestream"
+	"github.com/harmonicinc-video/litestream/internal"
 )
 
 // ReplicaClientType is the client type for this package.

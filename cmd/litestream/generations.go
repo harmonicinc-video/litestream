@@ -8,7 +8,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/benbjohnson/litestream"
+	"github.com/harmonicinc-video/litestream"
 )
 
 // GenerationsCommand represents a command to list all generations for a database.
