@@ -22,7 +22,7 @@ import (
 	"github.com/superfly/ltx"
 	"modernc.org/sqlite"
 
-	"github.com/benbjohnson/litestream/internal"
+	"github.com/harmonicinc-video/litestream/internal"
 )
 
 // Default DB settings.
