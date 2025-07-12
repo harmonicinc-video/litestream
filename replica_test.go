@@ -13,10 +13,10 @@ import (
 
 	"github.com/superfly/ltx"
 
-	"github.com/benbjohnson/litestream"
-	"github.com/benbjohnson/litestream/file"
-	"github.com/benbjohnson/litestream/internal/testingutil"
-	"github.com/benbjohnson/litestream/mock"
+	"github.com/harmonicinc-video/litestream"
+	"github.com/harmonicinc-video/litestream/file"
+	"github.com/harmonicinc-video/litestream/internal/testingutil"
+	"github.com/harmonicinc-video/litestream/mock"
 )
 
 func TestReplica_Sync(t *testing.T) {

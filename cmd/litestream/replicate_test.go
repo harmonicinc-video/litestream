@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	main "github.com/benbjohnson/litestream/cmd/litestream"
+	main "github.com/harmonicinc-video/litestream/cmd/litestream"
 )
 
 func TestReplicateCommand_ParseFlags_FlagPositioning(t *testing.T) {

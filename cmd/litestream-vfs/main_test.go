@@ -14,9 +14,12 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/psanford/sqlite3vfs"
 
-	"github.com/benbjohnson/litestream"
-	"github.com/benbjohnson/litestream/file"
-	"github.com/benbjohnson/litestream/internal/testingutil"
+	"github.com/harmonicinc-video
+/litestream"
+	"github.com/harmonicinc-video
+/litestream/file"
+	"github.com/harmonicinc-video
+/litestream/internal/testingutil"
 )
 
 func TestVFS_Integration(t *testing.T) {

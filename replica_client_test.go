@@ -12,9 +12,9 @@ import (
 
 	"github.com/superfly/ltx"
 
-	"github.com/benbjohnson/litestream"
-	"github.com/benbjohnson/litestream/internal/testingutil"
-	"github.com/benbjohnson/litestream/s3"
+	"github.com/harmonicinc-video/litestream"
+	"github.com/harmonicinc-video/litestream/internal/testingutil"
+	"github.com/harmonicinc-video/litestream/s3"
 )
 
 // createLTXData creates a minimal valid LTX file with a header for testing.

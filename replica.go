@@ -14,7 +14,7 @@ import (
 	"filippo.io/age"
 	"github.com/superfly/ltx"
 
-	"github.com/benbjohnson/litestream/internal"
+	"github.com/harmonicinc-video/litestream/internal"
 )
 
 // Default replica settings.
