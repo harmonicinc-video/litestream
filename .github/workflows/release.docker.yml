@@ -1,7 +1,8 @@
-on:
-  release:
-    types:
-      - published
+# DISABLED - Workflow triggers commented out
+# on:
+#   release:
+#     types:
+#       - published
 # pull_request:
 #   types:
 #     - opened
@@ -10,7 +11,7 @@ on:
 #   branches-ignore:
 #     - "dependabot/**"
 
-name: Release (Docker)
+name: DISABLED - Release (Docker)
 jobs:
   docker:
     runs-on: ubuntu-latest
