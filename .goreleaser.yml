@@ -116,7 +116,7 @@ changelog:
 
 release:
   github:
-    owner: benbjohnson
+    owner: harmonicinc-video
     name: litestream
   draft: false
   prerelease: auto
