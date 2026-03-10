@@ -5,7 +5,9 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/harmonicinc-video/litestream"
 	"github.com/harmonicinc-video/litestream/file"
@@ -140,5 +142,95 @@ func TestReplica_Snapshot(t *testing.T) {
 		t.Fatalf("info[0]=%s, want %s", got, want)
 	} else if got, want := infos[1].Pos(), pos1.Truncate(); got != want {
 		t.Fatalf("info[1]=%s, want %s", got, want)
+	}
+}
+
+// mustWriteStubSnapshot creates a stub snapshot file for the given generation
+// and index under the file client's directory, then sets its mtime to the
+// given time. No DB or Replica involvement — purely filesystem setup.
+func mustWriteStubSnapshot(tb testing.TB, c *file.ReplicaClient, generation string, index int, mtime time.Time) {
+	tb.Helper()
+	snapshotPath, err := c.SnapshotPath(generation, index)
+	if err != nil {
+		tb.Fatalf("snapshot path: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(snapshotPath), 0o755); err != nil {
+		tb.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(snapshotPath, []byte("stub"), 0o644); err != nil {
+		tb.Fatalf("write stub snapshot: %v", err)
+	}
+	if err := os.Chtimes(snapshotPath, mtime, mtime); err != nil {
+		tb.Fatalf("chtimes: %v", err)
+	}
+}
+
+// TestReplica_Retainer_PrunesExpiredKeepsRecent verifies that retainer()
+// enforces retention at startup before any ticker fires.
+//
+// Three generations have all-expired snapshots; one has a recent snapshot
+// inside the retention window. RetentionCheckInterval is set to 24h so the
+// ticker never fires during the test — any pruning must come from the startup
+// call.
+//
+// Expected: FAIL until the startup EnforceRetention call is added to retainer().
+func TestReplica_Retainer_PrunesExpiredKeepsRecent(t *testing.T) {
+	const retention = 1 * time.Minute
+
+	now := time.Now()
+	expired := now.Add(-2 * retention) // clearly outside retention
+	recent := now.Add(-retention / 2)  // clearly inside retention
+
+	c := file.NewReplicaClient(t.TempDir())
+
+	// Three expired generations — must be deleted by startup enforcement.
+	expiredGens := []string{"aaaa000000000001", "aaaa000000000002", "aaaa000000000003"}
+	for _, gen := range expiredGens {
+		mustWriteStubSnapshot(t, c, gen, 0, expired)
+	}
+
+	// One recent generation — must survive.
+	recentGen := "bbbb000000000001"
+	mustWriteStubSnapshot(t, c, recentGen, 0, recent)
+
+	r := litestream.NewReplica(nil, "")
+	r.Client = c
+	r.Retention = retention
+	r.RetentionCheckInterval = 24 * time.Hour // ticker never fires during test
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		r.ReplicaRetainer(ctx)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+	<-done
+
+	// All expired generations must be pruned.
+	for _, gen := range expiredGens {
+		remaining, err := c.Generations(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, g := range remaining {
+			if g == gen {
+				t.Errorf("expired generation %s still present; retainer() did not enforce retention at startup", gen)
+			}
+		}
+	}
+
+	// Exactly the recent generation must survive.
+	remaining, err := c.Generations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := len(remaining), 1; got != want {
+		t.Fatalf("len(generations)=%d, want %d; generations=%v", got, want, remaining)
+	}
+	if got, want := remaining[0], recentGen; got != want {
+		t.Fatalf("surviving generation=%s, want %s", got, want)
 	}
 }
