@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -172,8 +173,6 @@ func mustWriteStubSnapshot(tb testing.TB, c *file.ReplicaClient, generation stri
 // inside the retention window. RetentionCheckInterval is set to 24h so the
 // ticker never fires during the test — any pruning must come from the startup
 // call.
-//
-// Expected: FAIL until the startup EnforceRetention call is added to retainer().
 func TestReplica_Retainer_PrunesExpiredKeepsRecent(t *testing.T) {
 	const retention = 1 * time.Minute
 
@@ -205,22 +204,24 @@ func TestReplica_Retainer_PrunesExpiredKeepsRecent(t *testing.T) {
 		r.ReplicaRetainer(ctx)
 	}()
 
-	time.Sleep(50 * time.Millisecond)
-	cancel()
-	<-done
-
-	// All expired generations must be pruned.
-	for _, gen := range expiredGens {
+	// Poll until the startup enforcement has pruned all expired generations,
+	// rather than relying on a fixed sleep that can race under load.
+	deadline := time.Now().Add(2 * time.Second)
+	for {
 		remaining, err := c.Generations(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, g := range remaining {
-			if g == gen {
-				t.Errorf("expired generation %s still present; retainer() did not enforce retention at startup", gen)
-			}
+		if !slices.ContainsFunc(remaining, func(g string) bool { return slices.Contains(expiredGens, g) }) {
+			break
 		}
+		if time.Now().After(deadline) {
+			t.Fatal("timed out waiting for retainer startup enforcement to prune expired generations")
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
+	cancel()
+	<-done
 
 	// Exactly the recent generation must survive.
 	remaining, err := c.Generations(context.Background())
