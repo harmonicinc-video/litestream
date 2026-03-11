@@ -720,6 +720,12 @@ func (r *Replica) retainer(ctx context.Context) {
 		checkInterval = r.Retention
 	}
 
+	if ctx.Err() == nil {
+		if err := r.EnforceRetention(ctx); err != nil {
+			r.Logger().Error("retainer error", "error", err)
+		}
+	}
+
 	ticker := time.NewTicker(checkInterval)
 	defer ticker.Stop()
 
