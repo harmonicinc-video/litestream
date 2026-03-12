@@ -1,8 +1,9 @@
+> **Note:** This is an internal Harmonic Inc. fork of the excellent [Litestream](https://github.com/benbjohnson/litestream) project originally created by Ben Johnson.
+
 Litestream
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/harmonicinc-video/litestream)
 ![Status](https://img.shields.io/badge/status-beta-blue)
 ![GitHub](https://img.shields.io/github/license/harmonicinc-video/litestream)
-[![Docker Pulls](https://img.shields.io/docker/pulls/litestream/litestream.svg?maxAge=604800)](https://hub.docker.com/r/litestream/litestream/)
 ![test](https://github.com/harmonicinc-video/litestream/workflows/test/badge.svg)
 ==========
 
@@ -11,16 +12,7 @@ background process and safely replicates changes incrementally to another file
 or S3. Litestream only communicates with SQLite through the SQLite API so it
 will not corrupt your database.
 
-If you need support or have ideas for improving Litestream, please join the
-[Litestream Slack][slack] or visit the [GitHub Discussions](https://github.com/harmonicinc-video/litestream/discussions).
-Please visit the [Litestream web site](https://litestream.io) for installation
-instructions and documentation.
-
-If you find this project interesting, please consider starring the project on
-GitHub.
-
-[slack]: https://join.slack.com/t/litestream/shared_invite/zt-n0j4s3ci-lx1JziR3bV6L2NMF723H3Q
-
+If you need support or have ideas for improving Litestream, please visit the [GitHub Discussions](https://github.com/harmonicinc-video/litestream/discussions).
 
 ## Acknowledgements
 
@@ -40,7 +32,6 @@ energy into the project to help make it better:
 
 Huge thanks to fly.io for their support and for contributing credits for testing and development!
 
-
 ## Contribution Policy
 
 Initially, Litestream was closed to outside contributions. The goal was to
@@ -53,8 +44,4 @@ a long-term maintenance burden so they will not be accepted at this time.
 Please [submit an issue][new-issue] if you have a feature you'd like to
 request.
 
-If you find mistakes in the documentation, please submit a fix to the
-[documentation repository][docs].
-
 [new-issue]: https://github.com/harmonicinc-video/litestream/issues/new
-[docs]: https://github.com/harmonicinc-video/litestream.io

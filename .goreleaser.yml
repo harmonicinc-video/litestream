@@ -15,7 +15,6 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
     goarch:
       - amd64
       - arm64
@@ -26,8 +25,6 @@ builds:
     ldflags:
       - -s -w -X main.Version={{.Version}}
     ignore:
-      - goos: windows
-        goarch: arm
       - goos: darwin
         goarch: arm
 
@@ -35,10 +32,6 @@ archives:
   - id: main
     formats:
       - tar.gz
-    format_overrides:
-      - goos: windows
-        formats:
-          - zip
     name_template: >-
       {{ .ProjectName }}-
       {{- .Version }}-
@@ -55,8 +48,8 @@ archives:
 
 nfpms:
   - vendor: Litestream
-    homepage: https://litestream.io
-    maintainer: Litestream Contributors <benbjohnson@yahoo.com>
+    homepage: https://github.com/harmonicinc-video/litestream
+    maintainer: Harmonic Internal
     description: Streaming replication for SQLite databases
     license: Apache 2.0
     formats:
@@ -79,24 +72,6 @@ nfpms:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
-#brews:
-#  - name: litestream
-#    homepage: https://litestream.io
-#    description: Streaming replication for SQLite databases
-#    license: Apache-2.0
-#    repository:
-#      owner: benbjohnson
-#      name: homebrew-litestream
-#      branch: main
-#      install: |
-#      bin.install "litestream"
-#      etc.install "etc/litestream.yml" => "litestream.yml"
-#    test: |
-#      system "#{bin}/litestream", "version"
-#    commit_author:
-#      name: goreleaser
-#      email: bot@goreleaser.com
-
 checksum:
   name_template: 'checksums.txt'
   algorithm: sha256
@@ -116,7 +91,7 @@ changelog:
 
 release:
   github:
-    owner: benbjohnson
+    owner: harmonicinc-video
     name: litestream
   draft: false
   prerelease: auto
@@ -124,17 +99,9 @@ release:
   header: |
     ## Platform Support
 
-    ⚠️ **Windows Notice**: Windows binaries are provided for convenience but Windows is NOT an officially supported platform. Use at your own risk. Community contributions for Windows improvements are welcome.
-
     ✅ **Supported Platforms**: Linux (amd64, arm64, armv6, armv7), macOS (amd64, arm64)
 
     ## Installation
-
-    ### Homebrew (macOS and Linux)
-    ```bash
-    brew tap benbjohnson/litestream
-    brew install litestream
-    ```
 
     ### Debian/Ubuntu
     Download the `.deb` file for your architecture and install:
@@ -150,22 +117,6 @@ release:
 
     ### Binary installation
     Download the appropriate archive for your platform, extract, and move to your PATH.
-
-  # Signing configuration
-  # signs:
-  #   - id: macos
-  #     cmd: gon
-  #     args:
-  #       - "{{ .ProjectPath }}/gon-sign.hcl"
-  #     artifacts: archive
-  #     ids:
-  #       - main
-  #     signature: "${artifact}.zip"
-  #     output: true
-  #     env:
-  #       - APPLE_DEVELOPER_ID_APPLICATION={{ .Env.APPLE_DEVELOPER_ID }}
-  #       - APPLE_DEVELOPER_TEAM_ID={{ .Env.APPLE_TEAM_ID }}
-  #       - AC_PASSWORD={{ .Env.AC_PASSWORD }}
 
 sboms:
   - artifacts: archive
