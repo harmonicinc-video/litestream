@@ -1,9 +1,10 @@
+> **Note:** This is an internal Harmonic Inc. fork of the excellent [Litestream](https://github.com/benbjohnson/litestream) project originally created by Ben Johnson.
+
 Litestream
-![GitHub release (latest by date)](https://img.shields.io/github/v/release/benbjohnson/litestream)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/harmonicinc-video/litestream)
 ![Status](https://img.shields.io/badge/status-beta-blue)
-![GitHub](https://img.shields.io/github/license/benbjohnson/litestream)
-[![Docker Pulls](https://img.shields.io/docker/pulls/litestream/litestream.svg?maxAge=604800)](https://hub.docker.com/r/litestream/litestream/)
-![test](https://github.com/benbjohnson/litestream/workflows/test/badge.svg)
+![GitHub](https://img.shields.io/github/license/harmonicinc-video/litestream)
+![test](https://github.com/harmonicinc-video/litestream/workflows/test/badge.svg)
 ==========
 
 Litestream is a standalone disaster recovery tool for SQLite. It runs as a
@@ -11,32 +12,27 @@ background process and safely replicates changes incrementally to another file
 or S3. Litestream only communicates with SQLite through the SQLite API so it
 will not corrupt your database.
 
-If you need support or have ideas for improving Litestream, please join the
-[Litestream Slack][slack] or visit the [GitHub Discussions](https://github.com/benbjohnson/litestream/discussions).
-Please visit the [Litestream web site](https://litestream.io) for installation
-instructions and documentation.
+If you need support or have ideas for improving Litestream, please visit the [GitHub Discussions](https://github.com/harmonicinc-video/litestream/discussions).
 
-If you find this project interesting, please consider starring the project on
-GitHub.
+## Acknowledgements
 
-[slack]: https://join.slack.com/t/litestream/shared_invite/zt-n0j4s3ci-lx1JziR3bV6L2NMF723H3Q
+Litestream was created by Ben Johnson. The project is incredibly grateful to the following people for their help and
+contributions! Without them, this project would not be what it is today.
 
-Contributing
-------------
-
-We welcome bug reports, fixes, and patches! Please see our [Contributing Guide](CONTRIBUTING.md) for details on how to contribute.
-
-Acknowledgements
-----------------
-
-I want to give special thanks to individuals who invest much of their time and
-energy into the project to help make it better:
-
-- Thanks to [Cory LaNou](https://twitter.com/corylanou) for giving early feedback and testing when Litestream was still pre-release.
-- Thanks to [Michael Lynch](https://github.com/mtlynch) for digging into issues and contributing to the documentation.
-- Thanks to [Kurt Mackey](https://twitter.com/mrkurt) for feedback and testing.
-- Thanks to [Sam Weston](https://twitter.com/cablespaghetti) for figuring out how to run Litestream on Kubernetes and writing up the docs for it.
-- Thanks to [Rafael](https://github.com/netstx) & [Jungle Boogie](https://github.com/jungle-boogie) for helping to get OpenBSD release builds working.
-- Thanks to [Simon Gottschlag](https://github.com/simongottschlag), [Marin](https://github.com/supermarin),[Victor Björklund](https://github.com/victorbjorklund), [Jonathan Beri](https://twitter.com/beriberikix) [Yuri](https://github.com/yurivish), [Nathan Probst](https://github.com/nprbst), [Yann Coleu](https://github.com/yanc0), and [Nicholas Grilly](https://twitter.com/ngrilly) for frequent feedback, testing, & support.
+- [David Crawshaw](https://github.com/crawshaw) - Lots of early help brainstorming
+  and writing the initial C implementations of the interceptor.
+- [Michael Malis](https://github.com/mmalis) - Helping to work out some complex
+  concurrency issues.
+- [Kurtis Nusbaum](https://github.com/kurtisn) - Poring over logs &
+  investigating bizarre synchronization bugs.
+- [Alexey Kutelev](https://github.com/z0rr0) - Helping refactor & write tests.
+- Plus many other amazing [contributors](https://github.com/benbjohnson/litestream/graphs/contributors) who have put their time and
+  energy into the project to help make it better:
 
 Huge thanks to fly.io for their support and for contributing credits for testing and development!
+
+## Contribution Policy
+
+Litestream is open to internal code contributions. Please submit a pull request or file an issue.
+
+[new-issue]: https://github.com/harmonicinc-video/litestream/issues/new
