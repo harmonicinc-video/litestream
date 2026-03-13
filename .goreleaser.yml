@@ -1,0 +1,93 @@
+version: 2
+
+project_name: litestream
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: litestream
+    main: ./cmd/litestream
+    binary: litestream
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
+
+archives:
+  - id: main
+    formats:
+      - tar.gz
+    name_template: >-
+      {{ .ProjectName }}-
+      {{- .Version }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    files:
+      - etc/litestream.yml
+      - etc/litestream.service
+      - README.md
+      - LICENSE
+
+nfpms:
+  - vendor: Litestream
+    homepage: https://github.com/harmonicinc-video/litestream
+    maintainer: Harmonic Internal
+    description: Streaming replication for SQLite databases
+    license: Apache 2.0
+    formats:
+      - deb
+      - rpm
+    contents:
+      - src: etc/litestream.yml
+        dst: /etc/litestream.yml
+        type: config
+      - src: etc/litestream.service
+        dst: /lib/systemd/system/litestream.service
+        type: config
+    bindir: /usr/bin
+    file_name_template: >-
+      {{ .ProjectName }}-
+      {{- .Version }}-
+      {{- .Os }}-
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+
+checksum:
+  name_template: 'checksums.txt'
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - 'Merge pull request'
+      - 'Merge branch'
+
+release:
+  github:
+    owner: harmonicinc-video
+    name: litestream
+  draft: false
+  prerelease: auto
+  mode: replace
+
+sboms:
+  - artifacts: archive
