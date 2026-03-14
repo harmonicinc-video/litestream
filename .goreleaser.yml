@@ -11,7 +11,11 @@ builds:
     main: ./cmd/litestream
     binary: litestream
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
+      - >-
+        {{- if eq .Arch "amd64"}}CC=gcc
+        {{- else if eq .Arch "arm64"}}CC=aarch64-linux-gnu-gcc
+        {{- end}}
     goos:
       - linux
     goarch:
