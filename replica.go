@@ -482,14 +482,21 @@ func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 	r.muf.Lock()
 	defer r.muf.Unlock()
 
+	logger := r.Logger()
+
 	// Prevent checkpoints during snapshot.
 	r.db.BeginSnapshot()
 	defer r.db.EndSnapshot()
+
+	preSnapshotStartTime := time.Now()
+	logger.Info("[snapshot] phase: pre-snapshot", "db", r.db.Path())
 
 	// Issue a passive checkpoint to flush any pages to disk before snapshotting.
 	if _, err := r.db.db.ExecContext(ctx, `PRAGMA wal_checkpoint(PASSIVE);`); err != nil {
 		return info, fmt.Errorf("pre-snapshot checkpoint: %w", err)
 	}
+
+	logger.Info("[snapshot] phase: acquire read lock", "db", r.db.Path(), "elapsed_since_pre_snapshot", time.Since(preSnapshotStartTime).String())
 
 	// Acquire a read lock on the database during snapshot to prevent checkpoints.
 	tx, err := r.db.db.Begin()
@@ -500,6 +507,8 @@ func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 		return info, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	logger.Info("[snapshot] phase: read lock acquired", "db", r.db.Path())
+	readLockStartTime := time.Now()
 
 	// Obtain current position.
 	pos, err := r.db.Pos()
@@ -554,8 +563,7 @@ func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 		return wc.Close()
 	})
 
-	logger := r.Logger()
-	logger.Info("write snapshot", "position", pos.String())
+	logger.Info("[snapshot] phase: write snapshot", "position", pos.String())
 
 	startTime := time.Now()
 	// Delegate write to client & wait for writer goroutine to finish.
@@ -565,7 +573,7 @@ func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 		return info, err
 	}
 
-	logger.Info("snapshot written", "position", pos.String(), "elapsed", time.Since(startTime).String(), "sz", info.Size)
+	logger.Info("[snapshot] phase: snapshot written", "position", pos.String(), "elapsed", time.Since(startTime).String(), "sz", info.Size, "read_lock_elapsed", time.Since(readLockStartTime).String(), "generation", info.Generation, "index", info.Index, "created_at", info.CreatedAt.Format(time.RFC3339), "elapsed_since_pre_snapshot", time.Since(preSnapshotStartTime).String())
 	return info, nil
 }
 
