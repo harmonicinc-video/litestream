@@ -10,7 +10,10 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"reflect"
+	"runtime/pprof"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -473,23 +476,135 @@ func (r *Replica) Snapshots(ctx context.Context) ([]SnapshotInfo, error) {
 	return a, nil
 }
 
+// extractReplicaID extracts the unique replica ID from the S3 path.
+// For S3 paths like "s3://bucket/path/replica-id/cmaf/...", returns "replica-id".
+// Falls back to database name if extraction fails.
+func (r *Replica) extractReplicaID() string {
+	// Try to extract from S3 client using reflection to avoid circular imports
+	clientValue := reflect.ValueOf(r.Client)
+	if clientValue.Kind() == reflect.Ptr && clientValue.Type().String() == "*s3.ReplicaClient" {
+		pathField := clientValue.Elem().FieldByName("Path")
+		if pathField.IsValid() && pathField.Kind() == reflect.String {
+			path := pathField.String()
+			// Parse path like "harmonicinc/origin/streams/0404cfa2-4b2a-4e18-88a3-1731f168dbff/cmaf/..."
+			parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
+			for i, part := range parts {
+				if part == "streams" && i+1 < len(parts) {
+					replicaID := parts[i+1]
+					if replicaID != "" {
+						return replicaID
+					}
+				}
+			}
+		}
+	}
+	// Fallback to database name if extraction fails
+	return filepath.Base(r.db.Path())
+}
+
+// getProfileDir returns the hardcoded profile directory path: /tmp/litestream-pprofs/
+// Creates the directory if it doesn't exist. Returns error only if directory cannot be created.
+func (r *Replica) getProfileDir() (string, error) {
+	const profileDir = "/tmp/litestream-pprofs"
+
+	// Create the directory if it doesn't exist
+	if err := os.MkdirAll(profileDir, 0750); err != nil {
+		return "", fmt.Errorf("cannot create profile directory: %w", err)
+	}
+
+	return profileDir, nil
+}
+
+// captureProfiles stops CPU profiling and captures block profile for lock contention analysis.
+// This is non-blocking: if profiling fails, the error is logged but not returned.
+func (r *Replica) captureProfiles(ctx context.Context, cpuProfileFile *os.File, snapshotStartTime time.Time) {
+	if cpuProfileFile == nil {
+		return
+	}
+
+	logger := r.Logger()
+	replicaID := r.extractReplicaID()
+	pid := os.Getpid()
+	timestamp := snapshotStartTime.Format("2006-01-02_15-04-05")
+
+	// Stop CPU profiling and close the file
+	pprof.StopCPUProfile()
+	if err := cpuProfileFile.Close(); err != nil {
+		logger.Error("[snapshot] failed to close CPU profile", "error", err)
+	} else {
+		fileInfo, err := os.Stat(cpuProfileFile.Name())
+		if err != nil {
+			logger.Error("[snapshot] failed to stat CPU profile", "error", err)
+		} else {
+			logger.Info("[snapshot] CPU profile written", "file", cpuProfileFile.Name(), "size_bytes", fileInfo.Size())
+		}
+	}
+
+	// Capture block profile (lock contention) in the same directory
+	profileDir, err := r.getProfileDir()
+	if err != nil {
+		logger.Error("[snapshot] failed to get profile directory", "error", err)
+		return
+	}
+
+	blockProfileFile := filepath.Join(profileDir, fmt.Sprintf("profile-%s-%d-%s-block.pprof", replicaID, pid, timestamp))
+	if f, err := os.Create(blockProfileFile); err != nil {
+		logger.Error("[snapshot] failed to create block profile file", "error", err)
+	} else {
+		defer f.Close()
+
+		// Write block profile to capture lock contention during snapshot
+		if err := pprof.Lookup("block").WriteTo(f, 0); err != nil {
+			logger.Error("[snapshot] failed to write block profile", "error", err)
+		} else {
+			fileInfo, _ := f.Stat()
+			logger.Info("[snapshot] block profile written", "file", blockProfileFile, "size_bytes", fileInfo.Size())
+		}
+	}
+}
+
 // Snapshot copies the entire database to the replica path.
 func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 	if r.db == nil || r.db.db == nil {
 		return info, fmt.Errorf("no database available")
 	}
 
+	logger := r.Logger()
+
+	// Extract replica ID early for consistent profile naming
+	replicaID := r.extractReplicaID()
+	pid := os.Getpid()
+	preSnapshotStartTime := time.Now()
+	timestamp := preSnapshotStartTime.Format("2006-01-02_15-04-05")
+
+	// Start CPU profiling BEFORE acquiring lock to capture lock contention
+	profileDir, err := r.getProfileDir()
+	if err != nil {
+		logger.Warn("[snapshot] failed to get profile directory", "error", err)
+		profileDir = os.TempDir() // Fallback to /tmp if directory creation fails
+	}
+
+	cpuProfilePath := filepath.Join(profileDir, fmt.Sprintf("profile-%s-%d-%s-cpu.pprof", replicaID, pid, timestamp))
+	cpuProfileFile, err := os.Create(cpuProfilePath)
+	if err != nil {
+		logger.Warn("[snapshot] failed to create CPU profile file", "error", err)
+		cpuProfileFile = nil
+	} else {
+		if err := pprof.StartCPUProfile(cpuProfileFile); err != nil {
+			logger.Warn("[snapshot] failed to start CPU profile", "error", err)
+			cpuProfileFile.Close()
+			cpuProfileFile = nil
+		}
+	}
+
+	logger.Info("[snapshot] phase: pre-snapshot", "db", r.db.Path())
+
 	r.muf.Lock()
 	defer r.muf.Unlock()
-
-	logger := r.Logger()
 
 	// Prevent checkpoints during snapshot.
 	r.db.BeginSnapshot()
 	defer r.db.EndSnapshot()
-
-	preSnapshotStartTime := time.Now()
-	logger.Info("[snapshot] phase: pre-snapshot", "db", r.db.Path())
 
 	// Issue a passive checkpoint to flush any pages to disk before snapshotting.
 	if _, err := r.db.db.ExecContext(ctx, `PRAGMA wal_checkpoint(PASSIVE);`); err != nil {
@@ -574,6 +689,10 @@ func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 	}
 
 	logger.Info("[snapshot] phase: snapshot written", "position", pos.String(), "elapsed", time.Since(startTime).String(), "sz", info.Size, "read_lock_elapsed", time.Since(readLockStartTime).String(), "generation", info.Generation, "index", info.Index, "created_at", info.CreatedAt.Format(time.RFC3339), "elapsed_since_pre_snapshot", time.Since(preSnapshotStartTime).String())
+
+	// Stop CPU profiling and capture block profile
+	r.captureProfiles(ctx, cpuProfileFile, preSnapshotStartTime)
+
 	return info, nil
 }
 
