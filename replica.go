@@ -588,12 +588,23 @@ func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
 		retained = append(retained, snapshot)
 	}
 
+	var currentGeneration string
+	if r.db != nil {
+		pos, err := r.db.Pos()
+		if err != nil {
+			return fmt.Errorf("current position: %w", err)
+		}
+		currentGeneration = pos.Generation
+	}
 	// Loop over generations and delete unretained snapshots & WAL files.
 	generations, err := r.Client.Generations(ctx)
 	if err != nil {
 		return fmt.Errorf("generations: %w", err)
 	}
 	for _, generation := range generations {
+		if currentGeneration != "" && generation == currentGeneration {
+			continue
+		}
 		// Find earliest retained snapshot for this generation.
 		snapshot := FindMinSnapshotByGeneration(retained, generation)
 

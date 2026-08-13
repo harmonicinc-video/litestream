@@ -235,3 +235,63 @@ func TestReplica_Retainer_PrunesExpiredKeepsRecent(t *testing.T) {
 		t.Fatalf("surviving generation=%s, want %s", got, want)
 	}
 }
+
+func TestReplica_EnforceRetention_SkipsCurrentGeneration(t *testing.T) {
+	const retention = 1 * time.Minute
+
+	db, sqldb := MustOpenDBs(t)
+	defer MustCloseDBs(t, db, sqldb)
+
+	if _, err := sqldb.Exec(`CREATE TABLE foo (bar TEXT);`); err != nil {
+		t.Fatal(err)
+	} else if err := db.Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	pos, err := db.Pos()
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeGen := pos.Generation
+
+	now := time.Now()
+	expired := now.Add(-2 * retention)
+	recent := now.Add(-retention / 2)
+
+	c := file.NewReplicaClient(t.TempDir())
+	mustWriteStubSnapshot(t, c, "aaaa000000000001", 0, expired)
+	mustWriteStubSnapshot(t, c, "bbbb000000000001", 0, recent)
+
+	activeDir, err := c.GenerationDir(activeGen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(activeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	r := litestream.NewReplica(db, "")
+	r.Client = c
+	r.Retention = retention
+
+	if err := r.EnforceRetention(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	generations, err := c.Generations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(generations, "aaaa000000000001") {
+		t.Fatalf("expired generation was not deleted: %v", generations)
+	}
+	if !slices.Contains(generations, "bbbb000000000001") {
+		t.Fatalf("recent generation was deleted: %v", generations)
+	}
+	if !slices.Contains(generations, activeGen) {
+		t.Fatalf("current generation was deleted: %v", generations)
+	}
+	if got, want := len(generations), 2; got != want {
+		t.Fatalf("len(generations)=%d, want %d; generations=%v", got, want, generations)
+	}
+}
