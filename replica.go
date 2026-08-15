@@ -571,11 +571,43 @@ func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 
 // EnforceRetention forces a new snapshot once the retention interval has passed.
 // Older snapshots and WAL files are then removed.
+//
+// first captures a snapshot of current generations, then fetches snapshots strictly for that list
+// Any generations created afterward are ignored, preventing TOCTOU races between separate calls.
 func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
-	// Obtain list of snapshots that are within the retention period.
-	snapshots, err := r.Snapshots(ctx)
+	// Capture generation list once — only these will be evaluated.
+	generations, err := r.Client.Generations(ctx)
 	if err != nil {
-		return fmt.Errorf("snapshots: %w", err)
+		return fmt.Errorf("generations: %w", err)
+	}
+
+	// Determine the active generation so it is never deleted.
+	// If Pos() fails or returns no generation, skip all deletions to be safe.
+	var currentGeneration string
+	if r.db != nil {
+		pos, err := r.db.Pos()
+		if err != nil {
+			r.Logger().Error("enforce retention: cannot determine current generation, skipping", "error", err)
+			return nil
+		} else if pos.Generation == "" {
+			r.Logger().Error("enforce retention: cannot determine current generation, skipping")
+			return nil
+		}
+		currentGeneration = pos.Generation
+	}
+
+	// Fetch snapshots only for captured generations.
+	var snapshots []SnapshotInfo
+	for _, generation := range generations {
+		itr, err := r.Client.Snapshots(ctx, generation)
+		if err != nil {
+			return fmt.Errorf("snapshots(%s): %w", generation, err)
+		}
+		other, err := SliceSnapshotIterator(itr)
+		if err != nil {
+			return fmt.Errorf("snapshots(%s): %w", generation, err)
+		}
+		snapshots = append(snapshots, other...)
 	}
 	retained := FilterSnapshotsAfter(snapshots, time.Now().Add(-r.Retention))
 
@@ -588,12 +620,13 @@ func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
 		retained = append(retained, snapshot)
 	}
 
-	// Loop over generations and delete unretained snapshots & WAL files.
-	generations, err := r.Client.Generations(ctx)
-	if err != nil {
-		return fmt.Errorf("generations: %w", err)
-	}
+	// Delete unretained snapshots & WAL files from captured generations only.
 	for _, generation := range generations {
+		// Never delete the generation currently being replicated.
+		if currentGeneration != "" && generation == currentGeneration {
+			continue
+		}
+
 		// Find earliest retained snapshot for this generation.
 		snapshot := FindMinSnapshotByGeneration(retained, generation)
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -233,5 +234,212 @@ func TestReplica_Retainer_PrunesExpiredKeepsRecent(t *testing.T) {
 	}
 	if got, want := remaining[0], recentGen; got != want {
 		t.Fatalf("surviving generation=%s, want %s", got, want)
+	}
+}
+
+func TestReplica_EnforceRetention_SkipsCurrentGeneration(t *testing.T) {
+	const retention = 1 * time.Minute
+
+	db, sqldb := MustOpenDBs(t)
+	defer MustCloseDBs(t, db, sqldb)
+
+	if _, err := sqldb.Exec(`CREATE TABLE foo (bar TEXT);`); err != nil {
+		t.Fatal(err)
+	} else if err := db.Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	pos, err := db.Pos()
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeGen := pos.Generation
+
+	now := time.Now()
+	expired := now.Add(-2 * retention)
+	recent := now.Add(-retention / 2)
+
+	c := file.NewReplicaClient(t.TempDir())
+	mustWriteStubSnapshot(t, c, "aaaa000000000001", 0, expired)
+	mustWriteStubSnapshot(t, c, "bbbb000000000001", 0, recent)
+
+	activeDir, err := c.GenerationDir(activeGen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(activeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	r := litestream.NewReplica(db, "")
+	r.Client = c
+	r.Retention = retention
+
+	if err := r.EnforceRetention(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	generations, err := c.Generations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(generations, "aaaa000000000001") {
+		t.Fatalf("expired generation was not deleted: %v", generations)
+	}
+	if !slices.Contains(generations, "bbbb000000000001") {
+		t.Fatalf("recent generation was deleted: %v", generations)
+	}
+	if !slices.Contains(generations, activeGen) {
+		t.Fatalf("current generation was deleted: %v", generations)
+	}
+	if got, want := len(generations), 2; got != want {
+		t.Fatalf("len(generations)=%d, want %d; generations=%v", got, want, generations)
+	}
+}
+
+// delayedReplicaClient wraps a real ReplicaClient and injects a per-call delay
+// into Generations() to simulate slow S3 LIST latency. A hook is called once
+// after the first Generations() call returns, which lets the test inject a new
+// generation into the backing store mid-retention.
+type delayedReplicaClient struct {
+	litestream.ReplicaClient
+	generationsDelay time.Duration
+
+	mu                    sync.Mutex
+	generationsCalled     bool
+	afterFirstGenerations func()
+}
+
+func (c *delayedReplicaClient) Generations(ctx context.Context) ([]string, error) {
+	time.Sleep(c.generationsDelay)
+	result, err := c.ReplicaClient.Generations(ctx)
+
+	c.mu.Lock()
+	first := !c.generationsCalled
+	c.generationsCalled = true
+	hook := c.afterFirstGenerations
+	c.mu.Unlock()
+
+	if first && hook != nil {
+		hook()
+	}
+	return result, err
+}
+
+// TestReplica_EnforceRetention_NoTOCTOU verifies that a generation created
+// after the initial Generations() listing inside EnforceRetention is never
+// deleted. Because the function operates only on the captured generation set,
+// late arrivals are invisible to the deletion loop.
+func TestReplica_EnforceRetention_NoTOCTOU(t *testing.T) {
+	const retention = 2 * time.Hour
+
+	now := time.Now()
+	recent := now.Add(-retention / 2)
+
+	baseClient := file.NewReplicaClient(t.TempDir())
+
+	// Seed two pre-existing in-retention generations.
+	mustWriteStubSnapshot(t, baseClient, "aaaa000000000001", 0, recent)
+	mustWriteStubSnapshot(t, baseClient, "aaaa000000000002", 0, recent)
+
+	lateGen := "cccc000000000001"
+
+	dc := &delayedReplicaClient{
+		ReplicaClient:    baseClient,
+		generationsDelay: 50 * time.Millisecond,
+		afterFirstGenerations: func() {
+			// Simulate monitor creating a new generation while retention is running.
+			mustWriteStubSnapshot(t, baseClient, lateGen, 0, now)
+		},
+	}
+
+	r := litestream.NewReplica(nil, "")
+	r.Client = dc
+	r.Retention = retention
+
+	if err := r.EnforceRetention(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	// The late generation must still exist because it was not in the
+	// captured generation set.
+	generations, err := baseClient.Generations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(generations, lateGen) {
+		t.Fatalf("late generation %s was deleted; remaining=%v", lateGen, generations)
+	}
+	if !slices.Contains(generations, "aaaa000000000001") {
+		t.Fatalf("in-retention generation aaaa000000000001 was deleted; remaining=%v", generations)
+	}
+	if !slices.Contains(generations, "aaaa000000000002") {
+		t.Fatalf("in-retention generation aaaa000000000002 was deleted; remaining=%v", generations)
+	}
+}
+
+// TestReplica_EnforceRetention_StartupRace simulates the exact startup race:
+// monitor and retainer start concurrently, monitor creates a generation with
+// a snapshot, and retainer runs EnforceRetention immediately. The active
+// generation must never be deleted.
+func TestReplica_EnforceRetention_StartupRace(t *testing.T) {
+	const retention = 2 * time.Hour
+
+	db, sqldb := MustOpenDBs(t)
+	defer MustCloseDBs(t, db, sqldb)
+
+	if _, err := sqldb.Exec(`CREATE TABLE foo (bar TEXT);`); err != nil {
+		t.Fatal(err)
+	} else if err := db.Sync(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	pos, err := db.Pos()
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeGen := pos.Generation
+
+	now := time.Now()
+	recent := now.Add(-retention / 2)
+	expired := now.Add(-2 * retention)
+
+	c := file.NewReplicaClient(t.TempDir())
+
+	mustWriteStubSnapshot(t, c, "aaaa000000000001", 0, expired)
+	mustWriteStubSnapshot(t, c, "bbbb000000000001", 0, recent)
+
+	activeDir, err := c.GenerationDir(activeGen)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(activeDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	r := litestream.NewReplica(db, "")
+	r.Client = c
+	r.Retention = retention
+
+	// Run EnforceRetention multiple times to confirm idempotency.
+	for i := 0; i < 5; i++ {
+		if err := r.EnforceRetention(context.Background()); err != nil {
+			t.Fatalf("iteration %d: %v", i, err)
+		}
+	}
+
+	generations, err := c.Generations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if slices.Contains(generations, "aaaa000000000001") {
+		t.Fatalf("expired generation was not deleted: %v", generations)
+	}
+	if !slices.Contains(generations, "bbbb000000000001") {
+		t.Fatalf("in-retention generation was deleted: %v", generations)
+	}
+	if !slices.Contains(generations, activeGen) {
+		t.Fatalf("active generation %s was deleted: %v", activeGen, generations)
 	}
 }
