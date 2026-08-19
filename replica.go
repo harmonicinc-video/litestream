@@ -572,7 +572,11 @@ func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 // EnforceRetention forces a new snapshot once the retention interval has passed.
 // Older snapshots and WAL files are then removed.
 func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
-	// Obtain list of snapshots that are within the retention period.
+	// Loop over generations and delete unretained snapshots & WAL files.
+	generations, err := r.Client.Generations(ctx)
+	if err != nil {
+		return fmt.Errorf("generations: %w", err)
+	}
 	snapshots, err := r.Snapshots(ctx)
 	if err != nil {
 		return fmt.Errorf("snapshots: %w", err)
@@ -588,12 +592,19 @@ func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
 		retained = append(retained, snapshot)
 	}
 
-	// Loop over generations and delete unretained snapshots & WAL files.
-	generations, err := r.Client.Generations(ctx)
-	if err != nil {
-		return fmt.Errorf("generations: %w", err)
+	// Never delete the generation currently being written to.
+	var activeGeneration string
+	if r.db != nil {
+		if pos, err := r.db.Pos(); err == nil {
+			activeGeneration = pos.Generation
+		}
 	}
+
 	for _, generation := range generations {
+		if activeGeneration != "" && generation == activeGeneration {
+			continue
+		}
+
 		// Find earliest retained snapshot for this generation.
 		snapshot := FindMinSnapshotByGeneration(retained, generation)
 
