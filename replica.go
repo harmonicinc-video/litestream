@@ -572,7 +572,13 @@ func (r *Replica) Snapshot(ctx context.Context) (info SnapshotInfo, err error) {
 // EnforceRetention forces a new snapshot once the retention interval has passed.
 // Older snapshots and WAL files are then removed.
 func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
-	// Obtain list of snapshots that are within the retention period.
+	// Capture the generation list first. Anything created after this point is
+	// simply not considered this round, so a generation can never be deleted
+	// merely because its snapshots were listed before it existed.
+	generations, err := r.Client.Generations(ctx)
+	if err != nil {
+		return fmt.Errorf("generations: %w", err)
+	}
 	snapshots, err := r.Snapshots(ctx)
 	if err != nil {
 		return fmt.Errorf("snapshots: %w", err)
@@ -588,10 +594,13 @@ func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
 		retained = append(retained, snapshot)
 	}
 
-	// Loop over generations and delete unretained snapshots & WAL files.
-	generations, err := r.Client.Generations(ctx)
-	if err != nil {
-		return fmt.Errorf("generations: %w", err)
+	var activeGeneration string
+	if r.db != nil {
+		if pos, err := r.db.Pos(); err != nil {
+			r.Logger().Warn("cannot determine active generation, skipping generation deletes", "error", err)
+		} else {
+			activeGeneration = pos.Generation
+		}
 	}
 	for _, generation := range generations {
 		// Find earliest retained snapshot for this generation.
@@ -599,6 +608,10 @@ func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
 
 		// Delete entire generation if no snapshots are being retained.
 		if snapshot == nil {
+			// Skip it if the generation is the same as the active generation
+			if activeGeneration != "" && generation == activeGeneration {
+				continue
+			}
 			if err := r.Client.DeleteGeneration(ctx, generation); err != nil {
 				return fmt.Errorf("delete generation: %w", err)
 			}
