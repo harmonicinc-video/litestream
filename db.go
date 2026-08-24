@@ -125,7 +125,7 @@ func NewDB(path string) *DB {
 		TruncatePageN:      DefaultTruncatePageN,
 		CheckpointInterval: DefaultCheckpointInterval,
 		MonitorInterval:    DefaultMonitorInterval,
-		Logger:             slog.With("db", path),
+		Logger:             slog.With("db", path).With("application", "litestream"),
 	}
 
 	db.dbSizeGauge = dbSizeGaugeVec.WithLabelValues(db.path)
