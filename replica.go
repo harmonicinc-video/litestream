@@ -597,7 +597,7 @@ func (r *Replica) EnforceRetention(ctx context.Context) (err error) {
 	var activeGeneration string
 	if r.db != nil {
 		if pos, err := r.db.Pos(); err != nil {
-			r.Logger().Warn("cannot determine active generation, skipping generation deletes", "error", err)
+			r.Logger().Warn("cannot determine active generation, expect no active generation exists at the moment", "error", err)
 		} else {
 			activeGeneration = pos.Generation
 		}
