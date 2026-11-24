@@ -1,6 +1,6 @@
 module github.com/harmonicinc-video/litestream
 
-go 1.21
+go 1.25.0
 
 require (
 	cloud.google.com/go/storage v1.31.0
@@ -12,9 +12,9 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.18
 	github.com/pkg/sftp v1.13.5
 	github.com/prometheus/client_golang v1.16.0
-	golang.org/x/crypto v0.12.0
-	golang.org/x/sync v0.3.0
-	golang.org/x/sys v0.11.0
+	golang.org/x/crypto v0.52.0
+	golang.org/x/sync v0.20.0
+	golang.org/x/sys v0.45.0
 	google.golang.org/api v0.135.0
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -42,9 +42,9 @@ require (
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	golang.org/x/net v0.14.0 // indirect
+	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/oauth2 v0.11.0 // indirect
-	golang.org/x/text v0.12.0 // indirect
+	golang.org/x/text v0.37.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230807174057-1744710a1577 // indirect
