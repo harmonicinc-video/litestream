@@ -1,6 +1,6 @@
 module github.com/harmonicinc-video/litestream
 
-go 1.21
+go 1.23.0
 
 require (
 	cloud.google.com/go/storage v1.31.0
@@ -21,8 +21,7 @@ require (
 
 require (
 	cloud.google.com/go v0.110.7 // indirect
-	cloud.google.com/go/compute v1.23.0 // indirect
-	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	cloud.google.com/go/compute/metadata v0.3.0 // indirect
 	cloud.google.com/go/iam v1.1.1 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -43,7 +42,7 @@ require (
 	github.com/prometheus/procfs v0.11.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/net v0.14.0 // indirect
-	golang.org/x/oauth2 v0.11.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/text v0.12.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
